@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/nlopes/slack"
@@ -49,7 +50,8 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	switch e := event.(type) {
 	case *github.PullRequestEvent:
 		for _, element := range e.PullRequest.RequestedReviewers {
-			slackNotifyReviewer(github.Stringify(element.Login), github.Stringify(e.Sender.Login))
+			slackNotifyReviewer(strings.Replace(github.Stringify(element.Login), "\"", "", -1),
+				strings.Replace(github.Stringify(e.Sender.Login), "\"", "", -1))
 		}
 	default:
 		log.Printf("unknown event type %s\n", github.WebHookType(r))
@@ -57,12 +59,17 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func slackNotifyReviewer(user string, sender string) {
-	var channelID = SlackUsers[user]
-	fmt.Println(channelID)
+func slackNotifyReviewer(uid string, sender string) {
+	var channelID = SlackUsers[uid]
 	uid, _, err := SlackClient.PostMessage(channelID,
 		slack.MsgOptionText(fmt.Sprintf("Your attention has been requested to a pull request by %s!!", sender), false),
 		slack.MsgOptionAsUser(true),
+		[]slack.AttachmentField
+			{
+				Title: "one",
+			Value: "value",
+			Short: true,
+			}
 	)
 	if err != nil {
 		fmt.Printf("%s\n", err)
